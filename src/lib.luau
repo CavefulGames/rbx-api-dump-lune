@@ -1,9 +1,5 @@
---!strict
-
 type Array<T> = { [number]: T }
 type Dictionary<T> = { [string]: T }
-
-local RunService = game:GetService("RunService")
 
 local INVALID_DUMP_VERSION = "API dump is an invalid version `%i` (expected version 1)"
 local MODULE_NOT_READY_MESSAGE = "API has not been fetched yet; try using API.isReady() before calling API functions"
@@ -11,13 +7,15 @@ local CLASS_NOT_REAL_MESSAGE = "Class `%s` is not a valid Roblox class"
 local API_REQUEST_FAILED_MESSAGE = "Could not get API dump: `%s`. Retrying in %i seconds."
 
 --selene: allow(unused_variable)
-local ApiTypes = require(script.ApiTypes)
+local ApiTypes = require("./ApiTypes")
 
-local FetchApi = require(script.FetchApi)
-local Filters = require(script.Filters)
-local Util = require(script.Util)
+local FetchApi = require("./FetchApi")
+local Filters = require("./Filters")
+local Util = require("./Util")
+local task = require("@lune/task")
+local Signal = require("../lune_packages/signal")
 
-local ReadyBindable = Instance.new("BindableEvent")
+local readySignal = Signal.new() :: Signal.Signal<>
 
 local classMap: Dictionary<ApiTypes.Class> = {}
 local superClassMap: Dictionary<Array<ApiTypes.Class>> = {}
@@ -34,13 +32,14 @@ local function tryAPI(): ()
 		return
 	end
 
-	dump = FetchApi()
+	local newDump = FetchApi()
+	dump = newDump
 
-	if dump.Version ~= 1 then
-		error(string.format(INVALID_DUMP_VERSION, dump.Version), 2)
+	if newDump.Version ~= 1 then
+		error(string.format(INVALID_DUMP_VERSION, newDump.Version), 2)
 	end
 
-	for _, class in ipairs(dump.Classes) do
+	for _, class in ipairs(newDump.Classes) do
 		classMap[class.Name] = class
 	end
 
@@ -57,7 +56,7 @@ end
 
 local API = {}
 
-API.readyEvent = ReadyBindable.Event
+API.readyEvent = readySignal
 API.filters = Filters
 
 function API.isReady()
@@ -143,7 +142,7 @@ function API.getProperties(
 				continue
 			end
 
-			memberList[v.Name] = cloneMember(v)
+			memberList[v.Name] = cloneMember(v) :: ApiTypes.Property
 		end
 	end
 
@@ -187,7 +186,7 @@ function API.getFunctions(
 				continue
 			end
 
-			memberList[v.Name] = cloneMember(v)
+			memberList[v.Name] = cloneMember(v) :: ApiTypes.Function
 		end
 	end
 
@@ -231,7 +230,7 @@ function API.getEvents(
 				continue
 			end
 
-			memberList[v.Name] = cloneMember(v)
+			memberList[v.Name] = cloneMember(v) :: ApiTypes.Event
 		end
 	end
 
@@ -275,7 +274,7 @@ function API.getCallbacks(
 				continue
 			end
 
-			memberList[v.Name] = cloneMember(v)
+			memberList[v.Name] = cloneMember(v) :: ApiTypes.Callback
 		end
 	end
 
@@ -427,31 +426,35 @@ function API.getEnums(filter: Array<string>?): Array<string>
 end
 
 coroutine.resume(coroutine.create(function()
-	local succ, err = pcall(tryAPI)
-	if not succ then
-		warn(string.format(API_REQUEST_FAILED_MESSAGE, err, 0))
+	local succ = xpcall(tryAPI, function(err)
+		print(string.format(API_REQUEST_FAILED_MESSAGE, err, 0))
 		local step = 1
 		local accum = 0
-		local tryConnection
-		tryConnection = RunService.Heartbeat:Connect(function(delta)
-			accum += delta
-			if accum <= step then
-				return
-			end
-			accum = 0
-			step *= 2
+		local tryConnection: thread
+		tryConnection = task.spawn(function()
+			while true do
+				local delta = task.wait()
+				accum += delta
+				if accum <= step then
+					return
+				end
+				accum = 0
+				step *= 2
 
-			succ, err = pcall(tryAPI)
+				-- selene: allow(shadowing)
+				local succ = xpcall(tryAPI, function()
+					print(string.format(API_REQUEST_FAILED_MESSAGE, err, step))
+				end)
 
-			if succ then
-				tryConnection:Disconnect()
-				ReadyBindable:Fire()
-			else
-				warn(string.format(API_REQUEST_FAILED_MESSAGE, err, step))
+				if succ then
+					task.cancel(tryConnection)
+					readySignal:fire()
+				end
 			end
 		end)
-	else
-		ReadyBindable:Fire()
+	end)
+	if succ then
+		readySignal:fire()
 	end
 end))
 

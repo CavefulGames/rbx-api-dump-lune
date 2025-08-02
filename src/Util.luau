@@ -1,18 +1,14 @@
---!nonstrict
-
 type Dictionary<T> = { [string]: T }
 type Array<T> = { [number]: T }
 
 local BAD_MEMBER_TYPE_MESSAGE = "Unexpected member type `%s` (expected `Property`, `Function`, `Event`, or `Callback`)"
 
 -- selene: allow(unused_variable)
-local ApiTypes = require(script.Parent.ApiTypes)
+local ApiTypes = require("./ApiTypes")
 
 local Util = {}
 
--- This function is, to my knowledge, impossible to make in a strict environment, because there's no way to refine table types.
--- If we had `as`, it wouldn't be a problem, but as it stands we have to live with this solution.
-function Util.filterSecurity(security, filter: Dictionary<boolean>): boolean
+function Util.filterSecurity(security:{ Read: string, Write: string } | string, filter: Dictionary<boolean>): boolean
 	if type(security) == "string" then
 		return filter[security]
 	else
@@ -41,17 +37,13 @@ function Util.lookupify(tbl: Array<string>?): Dictionary<boolean>
 	return newTbl
 end
 
--- As before, there's no way to refine table types at the moment, so this has to be unstrict.
--- Despite that, it's perfectly type safe, so I feel comfortable putting it into production.
--- It just lets us be a bit more specific with the returns of functions like `getProperty`.
 function Util.cloneMember(
 	member: ApiTypes.Member
-): ApiTypes.Property | ApiTypes.Function | ApiTypes.Event | ApiTypes.Callback
-	local memberType = member.MemberType
-	if memberType == "Property" then
+): ApiTypes.Member
+	if member.MemberType == "Property" then
 		local newMember: ApiTypes.Property = {
 			Category = member.Category,
-			MemberType = memberType,
+			MemberType = member.MemberType,
 			Name = member.Name,
 			Security = member.Security,
 			Serialization = member.Serialization,
@@ -59,9 +51,9 @@ function Util.cloneMember(
 			Tags = member.Tags,
 		}
 		return newMember
-	elseif memberType == "Function" then
+	elseif member.MemberType == "Function" then
 		local newMember: ApiTypes.Function = {
-			MemberType = memberType,
+			MemberType = member.MemberType,
 			Name = member.Name,
 			Parameters = member.Parameters,
 			ReturnType = member.ReturnType,
@@ -69,18 +61,18 @@ function Util.cloneMember(
 			Tags = member.Tags,
 		}
 		return newMember
-	elseif memberType == "Event" then
+	elseif member.MemberType == "Event" then
 		local newMember: ApiTypes.Event = {
-			MemberType = memberType,
+			MemberType = member.MemberType,
 			Name = member.Name,
 			Parameters = member.Parameters,
 			Security = member.Security,
 			Tags = member.Tags,
 		}
 		return newMember
-	elseif memberType == "Callback" then
+	elseif member.MemberType == "Callback" then
 		local newMember: ApiTypes.Callback = {
-			MemberType = memberType,
+			MemberType = member.MemberType,
 			Name = member.Name,
 			Parameters = member.Parameters,
 			ReturnType = member.ReturnType,
@@ -89,7 +81,7 @@ function Util.cloneMember(
 		}
 		return newMember
 	else
-		error(string.format(BAD_MEMBER_TYPE_MESSAGE, memberType), 2)
+		error(string.format(BAD_MEMBER_TYPE_MESSAGE, member.MemberType), 2)
 	end
 end
 

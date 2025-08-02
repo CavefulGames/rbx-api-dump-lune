@@ -1,13 +1,15 @@
-# rbx-api-dump
+# rbx-api-dump-lune
 
-A simple and reasonable module for processing the Roblox API dump from inside Roblox. In addition to fulfilling a use case, this module also acted as an experimental use of Roblox's typed Luau. As a result, this module can be considered to be fully typesafe.
+This project is a fork of Dekkonot's [rbx-api-dump](https://github.com/Dekkonot/rbx-api-dump)
+
+A simple and reasonable module for processing the Roblox API dump from inside Roblox.
 
 This module pulls directly from Roblox's CDN, so it requires two HTTP requests to be sent when it's first required. Both of these requests are simple GET requests.
 
-To get the project you can:
- - Build it using [Rojo](https://github.com/Roblox/rojo) 6+ by running `rojo build -o api-dump.rbxmx`
- - Grab the latest version from [Releases](https://github.com/dekkonot/rbx-api-dump/releases)
- - Install it using [Wally](https://github.com/UpliftGames/wally) by referencing `dekkonot/api-dump`
+## Installation
+```sh
+pesde add caveful_games/rbx_api_dump -t lune
+```
 
 ## API
 

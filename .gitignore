@@ -1,7 +1,2 @@
-*.vscode/
-
-*.rbxm
-*.rbxmx
-
-sourcemap.json
-roblox.toml
+luau_packages
+lune_packages

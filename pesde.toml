@@ -1,0 +1,26 @@
+name = "caveful_games/rbx_api_dump"
+version = "0.1.0"
+description = "A simple and reasonable module for working with the API dump from inside Roblox using Lune"
+authors = ["Micah Reid <dekkonot@rocketmail.com>", "jiwonz <me@jiwonz.kr>"]
+repository = "https://github.com/CavefulGames/rbx-api-dump-lune"
+license = "MIT"
+includes = [
+	"README.md",
+	"LICENSE",
+	"src/**",
+	"pesde.toml",
+]
+
+[target]
+environment = "lune"
+lib = "src/lib.luau"
+
+[indices]
+default = "https://github.com/pesde-pkg/index"
+
+[engines]
+lune = "^0.9.4"
+pesde = "^0.7.0-rc.1"
+
+[dependencies]
+signal = { name = "jiwonz/signal", version = "^0.1.0" }
